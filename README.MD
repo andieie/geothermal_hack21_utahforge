@@ -1,4 +1,3 @@
-#READ_ME
 
 ## Get GDR Database 
 
