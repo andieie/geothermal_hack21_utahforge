@@ -3,7 +3,7 @@
 #%% 
 import requests
 import json
-
+import pandas as pd 
 # %% 
 def query_data(qfilter=''):
     url = 'https://gdr.openei.org/api'
@@ -53,12 +53,25 @@ print(len(check_list))
 # %% 
 #f = lambda x: x['url'].replace('https://gdr.openei.org/files/','').split('/')[0]
 #dff['id']  = dff['url'].apply(f)
-
+dff = pd.DataFrame(r_list, columns=['Url'])
 #TODO 
 #Merge with dff with uforge database 
-dff['id'] = dff['url'].apply(lambda x: x.split('/')[4])
+dff['xdrId'] = dff['Url'].apply(lambda x: x.split('/')[4])
+dff['xdrId'] = dff['xdrId'].astype(int)
+uforge['xdrId'] = uforge['xdrId'].astype(int)
 
+#merge on ID 
+newdf = uforge.merge(dff, on=['xdrId'], how='outer')
+newdf.head
 
-
+def fetch_utah( url):
+    var = url.split('/')
+    end = var[-1].split('.')
+    if end[-1] == 'zip':
+        path = pooch.retrieve(url=url, known_hash=None, processor=Unzip())
+    else:
+        path = pooch.retrieve(url=url, known_hash=None)
+    print(len(path))
+    return path
 
 # %%
