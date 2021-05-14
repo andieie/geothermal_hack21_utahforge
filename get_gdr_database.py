@@ -31,7 +31,9 @@ def query_data(qfilter=''):
     }
     json_data = json.loads(requests.post(url, headers=headers, data=data).text)
     submissions = pd.DataFrame(json_data['result'])
+    submissions.drop(['email','phone'], axis=1, inplace=True)
     return submissions
+
 
 def merge_dataframes(df_submissions, baseurl='https://gdr.openei.org/files/'):
     """Gives us back a dataframe with downloadable resources. Every row is a downloadable thing. 
@@ -53,13 +55,14 @@ def merge_dataframes(df_submissions, baseurl='https://gdr.openei.org/files/'):
             else:
                 print(f'Does not have resource thing you can download for index {url_id}' )
 
-    dff = pd.DataFrame(r_list, columns=['Url'])
-    dff['xdrId'] = dff['Url'].apply(lambda x: x.split('/')[4])
+    dff = pd.DataFrame(r_list, columns=['url'])
+    dff['xdrId'] = dff['url'].apply(lambda x: x.split('/')[4])
     dff['xdrId'] = dff['xdrId'].astype(int)
-    uforge['xdrId'] = uforge['xdrId'].astype(int)
-    df = uforge.merge(dff, on=['xdrId'], how='outer')
+    df_submissions['xdrId'] = df_submissions['xdrId'].astype(int)
+    df = df_submissions.merge(dff, on=['xdrId'], how='outer')
     df.drop(['_id','status','loggedInUser'], axis=1, inplace=True)
     return df
+
 
 def make_link(url):
     """[summary]
@@ -71,10 +74,8 @@ def make_link(url):
     return display(HTML(f"""<a href={url}>{actual_name}</a>"""))
     
 
-
-
 def download_data(row):
-    """Input a row with URL and download 
+    """Work in progress
 
     Args:
         row ([type]): [description]
@@ -90,15 +91,3 @@ def download_data(row):
         path = pooch.retrieve(url=url, known_hash=None)
     print(len(path))
     return path
-
-
-
-uforge = query_data('utah forge') #Could be the project number 
-# %%
-
-
-
-
-
-
-
