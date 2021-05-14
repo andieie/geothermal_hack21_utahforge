@@ -4,8 +4,18 @@
 import requests
 import json
 import pandas as pd 
+from IPython.core.display import display, HTML
+
 # %% 
 def query_data(qfilter=''):
+    """[summary]
+
+    Args:
+        qfilter (str, optional): Any string to query in the database ie: 'utah forge', 'EE0007080'. Defaults to ''.
+
+    Returns:
+        Submissions: Pandas Dataframe of submissions according to the query in qfilter
+    """
     url = 'https://gdr.openei.org/api'
     headers = {
         "accept": "application/json"
@@ -20,51 +30,58 @@ def query_data(qfilter=''):
         'length': 0,
     }
     json_data = json.loads(requests.post(url, headers=headers, data=data).text)
-    return pd.DataFrame(json_data['result'])
+    submissions = pd.DataFrame(json_data['result'])
+    return submissions
 
-uforge = query_data('utah forge')
-# %%
+def merge_dataframes(df_submissions, baseurl='https://gdr.openei.org/files/'):
+    """Gives us back a dataframe with downloadable resources. Every row is a downloadable thing. 
+
+    Args:
+        df_submissions ([type]): [description]
+        baseurl (str, optional): [description]. Defaults to 'https://gdr.openei.org/files/'.
+    """
+    r_list = []
+    id_list = []
+    for i, sub in df_submissions.iterrows():
+        url_id = str(sub['xdrId']) + '/'
+        res = sub.resources
+        for r in res:
+            if 'actualName' in r.keys():
+                url_aname = r['actualName']
+                url_res = baseurl + url_id + url_aname 
+                r_list.append(url_res)
+            else:
+                print(f'Does not have resource thing you can download for index {url_id}' )
+
+    dff = pd.DataFrame(r_list, columns=['Url'])
+    dff['xdrId'] = dff['Url'].apply(lambda x: x.split('/')[4])
+    dff['xdrId'] = dff['xdrId'].astype(int)
+    uforge['xdrId'] = uforge['xdrId'].astype(int)
+    df = uforge.merge(dff, on=['xdrId'], how='outer')
+    df.drop(['_id','status','loggedInUser'], axis=1, inplace=True)
+    return df
+
+def make_link(url):
+    """[summary]
+
+    Args:
+        url ([type]): [description]
+    """
+    actual_name = url.split('/')[-1]
+    return display(HTML(f"""<a href={url}>{actual_name}</a>"""))
+    
 
 
-#Get resources from the uforge data and add column with it 
-r_list = []
-b_list = []
-for sub in uforge.itertuples():
-    url_id = str(sub.xdrId) + '/'
-    url_base='https://gdr.openei.org/files/'
-    res = sub.resources
-    for r in res:
-        if 'actualName' in r.keys():
-            url_aname = r['actualName']
-            url_res = url_base + url_id + url_aname 
-            r_list.append(url_res)
-        else:
-            b_list.append(r)
-            print('Does not have resource thing you can download')
 
-# %% 
-check_list = []
-for i , row in uforge.iterrows():
-    for r in row.resources:
-        check_list.append(r)
-print(len(check_list))
+def download_data(row):
+    """Input a row with URL and download 
 
+    Args:
+        row ([type]): [description]
 
-# %% 
-#f = lambda x: x['url'].replace('https://gdr.openei.org/files/','').split('/')[0]
-#dff['id']  = dff['url'].apply(f)
-dff = pd.DataFrame(r_list, columns=['Url'])
-#TODO 
-#Merge with dff with uforge database 
-dff['xdrId'] = dff['Url'].apply(lambda x: x.split('/')[4])
-dff['xdrId'] = dff['xdrId'].astype(int)
-uforge['xdrId'] = uforge['xdrId'].astype(int)
-
-#merge on ID 
-newdf = uforge.merge(dff, on=['xdrId'], how='outer')
-newdf.head
-
-def fetch_utah( url):
+    Returns:
+        [type]: [description]
+    """
     var = url.split('/')
     end = var[-1].split('.')
     if end[-1] == 'zip':
@@ -74,4 +91,14 @@ def fetch_utah( url):
     print(len(path))
     return path
 
+
+
+uforge = query_data('utah forge') #Could be the project number 
 # %%
+
+
+
+
+
+
+
